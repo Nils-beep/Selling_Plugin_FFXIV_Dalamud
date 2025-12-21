@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Dalamud.NET.Sdk/13.1.0">
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+
+        <AssemblyName>SellingPlugin</AssemblyName>
+        <RootNamespace>SellingPlugin</RootNamespace>
+
+        <Version>0.0.0.1</Version>
+        <Authors>Spani</Authors>
+
+        <Name>SellingPlugin</Name>
+        <Author>Spani</Author>
+        <PunchLine>Helps selling lots of items without hand cramps</PunchLine>
+
+        <Description>Helps selling lots of items without hand cramps</Description>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+    
+  <ItemGroup>
+    <PackageReference Update="DalamudPackager" Version="14.0.1" />
+    <PackageReference Update="DotNet.ReproducibleBuilds" Version="1.2.39" />
+  </ItemGroup>
+</Project>

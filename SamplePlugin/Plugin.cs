@@ -1,12 +1,18 @@
-﻿using Dalamud.Game.Command;
+using Dalamud.Game.Addon.Lifecycle;
+using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
+using Dalamud.Game.ClientState.Conditions;
+using Dalamud.Game.ClientState.Objects.Types;
+using Dalamud.Game.Command;
+using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
-using System.IO;
-using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
-using SamplePlugin.Windows;
+using SellingPlugin.Windows;
+using System.IO;
+using Dalamud.Game.Inventory;
 
-namespace SamplePlugin;
+
+namespace SellingPlugin;
 
 public sealed class Plugin : IDalamudPlugin
 {
@@ -16,12 +22,14 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IClientState ClientState { get; private set; } = null!;
     [PluginService] internal static IDataManager DataManager { get; private set; } = null!;
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
+    [PluginService] internal static IAddonLifecycle AddonLifecycle { get; private set; } = null!;
 
-    private const string CommandName = "/pmycommand";
+
+    private const string CommandName = "/sellconfig";
 
     public Configuration Configuration { get; init; }
 
-    public readonly WindowSystem WindowSystem = new("SamplePlugin");
+    public readonly WindowSystem WindowSystem = new("InventoryPlugin");
     private ConfigWindow ConfigWindow { get; init; }
     private MainWindow MainWindow { get; init; }
 
@@ -29,18 +37,15 @@ public sealed class Plugin : IDalamudPlugin
     {
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
-        // You might normally want to embed resources and load them from the manifest stream
-        var goatImagePath = Path.Combine(PluginInterface.AssemblyLocation.Directory?.FullName!, "goat.png");
-
         ConfigWindow = new ConfigWindow(this);
-        MainWindow = new MainWindow(this, goatImagePath);
+        MainWindow = new MainWindow(this);
 
         WindowSystem.AddWindow(ConfigWindow);
         WindowSystem.AddWindow(MainWindow);
 
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "A useful message to display in /xlhelp"
+            HelpMessage = "Not sure how to help you"
         });
 
         // Tell the UI system that we want our windows to be drawn throught he window system
@@ -56,16 +61,36 @@ public sealed class Plugin : IDalamudPlugin
         // Add a simple message to the log with level set to information
         // Use /xllog to open the log window in-game
         // Example Output: 00:57:54.959 | INF | [SamplePlugin] ===A cool log message from Sample Plugin===
-        Log.Information($"===A cool log message from {PluginInterface.Manifest.Name}===");
-    }
+        Log.Information($"===buh {PluginInterface.Manifest.Name}===");
 
+        AddonLifecycle.RegisterListener(
+            AddonEvent.PostSetup,
+            new[] { "Shop" },
+            OnVendorOpened);
+
+        AddonLifecycle.RegisterListener(
+            AddonEvent.PreFinalize,
+            new[] { "Shop" },
+            OnVendorClosed);
+
+    }
+    private void OnVendorOpened(AddonEvent type, AddonArgs args)
+    {
+        MainWindow.IsOpen = true;
+    }
+    private void OnVendorClosed(AddonEvent type, AddonArgs args)
+    {
+        MainWindow.IsOpen = false;
+    }
     public void Dispose()
     {
         // Unregister all actions to not leak anythign during disposal of plugin
         PluginInterface.UiBuilder.Draw -= WindowSystem.Draw;
         PluginInterface.UiBuilder.OpenConfigUi -= ToggleConfigUi;
         PluginInterface.UiBuilder.OpenMainUi -= ToggleMainUi;
-        
+        AddonLifecycle.UnregisterListener(OnVendorOpened);
+        AddonLifecycle.UnregisterListener(OnVendorClosed);
+
         WindowSystem.RemoveAllWindows();
 
         ConfigWindow.Dispose();
@@ -77,7 +102,7 @@ public sealed class Plugin : IDalamudPlugin
     private void OnCommand(string command, string args)
     {
         // In response to the slash command, toggle the display status of our main ui
-        MainWindow.Toggle();
+        ConfigWindow.Toggle();
     }
     
     public void ToggleConfigUi() => ConfigWindow.Toggle();
